@@ -1,0 +1,349 @@
+#!/usr/bin/env bash
+
+set -e
+
+registry_path="https://registry.npmjs.org"
+
+# JSON parsing stolen from https://github.com/dominictarr/JSON.sh
+json_tokenize () {
+  local GREP
+  local ESCAPE
+  local CHAR
+
+  if echo "test string" | egrep -ao --color=never "test" >/dev/null 2>&1; then
+    GREP='egrep -ao --color=never'
+  else
+    GREP='egrep -ao'
+  fi
+
+  if echo "test string" | egrep -o "test" >/dev/null 2>&1; then
+    ESCAPE='(\\[^u[:cntrl:]]|\\u[0-9a-fA-F]{4})'
+    CHAR='[^[:cntrl:]"\\]'
+  else
+    GREP=awk_egrep
+    ESCAPE='(\\\\[^u[:cntrl:]]|\\u[0-9a-fA-F]{4})'
+    CHAR='[^[:cntrl:]"\\\\]'
+  fi
+
+  local STRING="\"$CHAR*($ESCAPE$CHAR*)*\""
+  local NUMBER='-?(0|[1-9][0-9]*)([.][0-9]*)?([eE][+-]?[0-9]*)?'
+  local KEYWORD='null|false|true'
+  local SPACE='[[:space:]]+'
+
+  # Force zsh to expand $A into multiple words
+  local is_wordsplit_disabled=$(unsetopt 2>/dev/null | grep -c '^shwordsplit$')
+  if [ $is_wordsplit_disabled != 0 ]; then setopt shwordsplit; fi
+  $GREP "$STRING|$NUMBER|$KEYWORD|$SPACE|." | egrep -v "^$SPACE$"
+  if [ $is_wordsplit_disabled != 0 ]; then unsetopt shwordsplit; fi
+}
+
+json_parse_array () {
+  local index=0
+  local ary=''
+
+  read -r token
+  case "$token" in
+    ']') ;;
+    *)
+      while : ; do
+        json_parse_value "$1" "$index"
+        index=$((index+1))
+        ary="$ary""$value"
+
+        read -r token
+        case "$token" in
+          ']') break ;;
+          ',') ary="$ary," ;;
+          *) fail "EXPECTED , or ] GOT ${token:-EOF}" ;;
+        esac
+
+        read -r token
+      done ;;
+  esac
+
+  value=$(printf '[%s]' "$ary")
+}
+
+json_parse_object () {
+  local key
+  local obj=''
+
+  read -r token
+  case "$token" in
+    '}') ;;
+    *)
+      while : ; do
+        case "$token" in
+          '"'*'"') key=$token ;;
+          *) fail "EXPECTED string GOT ${token:-EOF}" ;;
+        esac
+
+        read -r token
+        case "$token" in
+          ':') ;;
+          *) fail "EXPECTED : GOT ${token:-EOF}" ;;
+        esac
+
+        read -r token
+        json_parse_value "$1" "$key"
+        obj="$obj$key:$value"
+
+        read -r token
+        case "$token" in
+          '}') break ;;
+          ',') obj="$obj," ;;
+          *) fail "EXPECTED , or } GOT ${token:-EOF}" ;;
+        esac
+
+        read -r token
+      done ;;
+  esac
+
+  value=$(printf '{%s}' "$obj")
+  :
+}
+
+json_parse_value () {
+  local jpath="${1:+$1,}$2"
+
+  case "$token" in
+    '{') json_parse_object "$jpath" ;;
+    '[') json_parse_array  "$jpath" ;;
+    # At this point, the only valid single-character tokens are digits.
+    ''|[!0-9]) fail "EXPECTED value GOT ${token:-EOF}" ;;
+    # value with solidus ("\/") replaced in json strings with normalized value: "/"
+    *) value=$(echo "$token" | sed 's#\\/##g') ;;
+  esac
+
+  [ "$value" = '' ] && return
+  printf "[%s]\t%s\n" "$jpath" "$value"
+  :
+}
+
+json_parse () {
+  json="$1"
+
+  [ -z "$json" ] && return
+
+  echo "$json" | json_tokenize | (
+    read -r token
+    json_parse_value
+    read -r token
+  )
+
+  case "$token" in
+    '') ;;
+     *) fail "EXPECTED EOF GOT $token" ;;
+  esac
+}
+
+# What follows is the installer based on:
+# https://github.com/esy/esy/blob/15f593510ea078b4b392b931c9572bc07a306119/scripts/install-esy.sh
+
+json_get_value () {
+  local key="\[$(echo $1 | sed 's#\"#\\\"#g;s#\.#\\\.#g;s#/#\\/#g')\]"
+  local json="$2"
+  local filter=$(printf 's/^%s\s*\(.*\)/\\1/p' "$key")
+
+  json_parse "$json" | sed -n "$filter"
+}
+
+json_get_keys () {
+  local json="$1"
+
+  json_parse "$json" | sed 's/^\[\(.*\)\].*$/\1/'
+}
+
+json_get_string () {
+  local key="$1"
+  local json="$2"
+
+  json_get_value "$key" "$json" | sed 's/^"\(.*\)"$/\1/'
+}
+
+platform () {
+  if [[ "$OSTYPE" == "linux"* ]]; then
+    echo "linux"
+  elif [[ "$OSTYPE" == "darwin"* ]]; then
+    echo "darwin"
+  else
+    fail "Unknown platform: $OSTYPE"
+  fi
+}
+
+warn () {
+  echo "$*"
+}
+
+fail () {
+  >&2 echo "$*"
+  exit 1
+}
+
+check_shasum () {
+  local shasum="$1"
+  local file="$2"
+
+  if [ -x "$(type -p shasum)" ]; then
+    case "$(shasum "$file")" in
+      ${shasum}*) ;;
+      *) fail 'Integraty check failed. Shasums do not match.' ;;
+    esac
+  else
+    warn 'Integrity check skipped. Dependency missing: shasum.'
+  fi
+}
+
+download () {
+  local url="$1"
+  local headers=${2+"-H \"$2\""}
+
+  eval curl -sL# ${headers} "${url}"
+}
+
+download_metadata () {
+  local package="$1"
+  local version="$2"
+  local url="${registry_path}/${package}"
+
+  if [ "${package:0:1}" = '@' ]; then
+    # npm doesn't return per version metadata for scoped packages, fake it
+    # as per bug https://npm.community/t/bug-api-get-scoped-package-w-version-fails-with-401-status/3788 
+    local metadata=$(download "$url" 'Accept: application/vnd.npm.install-v1+json; q=1.0, application/json; q=0.8, */*')
+    json_get_value "\"versions\",\"${version}\"" "$metadata"
+  else
+    download "$url/${version}" 'Accept: application/vnd.npm.install-v1+json; q=1.0, application/json; q=0.8, */*'
+  fi
+}
+
+download_package () {
+  local package="$1"
+  local version="$2"
+  local archive="$3"
+
+  local metadata=$(download_metadata "$package" "$version")
+  local shasum=$(json_get_string '"dist","shasum"' "$metadata")
+  local tarball=$(json_get_string '"dist","tarball"' "$metadata")
+
+  download "$tarball" > "$archive"
+  check_shasum "$shasum" "$archive"
+}
+
+extract_package () {
+  local archive="$1"
+  local extract_dir="$2"
+
+  [ -e "$extract_dir" ] || mkdir "$extract_dir"
+  tar -xzf "$archive" -C "$extract_dir"
+}
+
+install_package_esy () {
+  local package_dir="$1"
+  local install_dir="$2"
+  local platform=$(platform)
+
+  [ -e "$install_dir/bin" ] || mkdir "$install_dir/bin"
+
+  cp "$package_dir/package/package.json" "$install_dir"
+  cp "$package_dir/package/platform-$platform/_build/default/bin/esyInstallRelease.js" "$install_dir/bin"
+  cp -r "$package_dir/package/platform-$platform/_build" "$install_dir"
+
+  chmod 0555 "$install_dir/_build/default/esy-build-package/bin/esyBuildPackageCommand.exe"
+  chmod 0555 "$install_dir/_build/default/esy-build-package/bin/esyRewritePrefixCommand.exe"
+
+  local binaries=$(json_get_value '"bin"' "$(cat "$package_dir/package/package.json")")
+  local binary
+  for binary in $(json_get_keys "$binaries"); do
+    local target=$(json_get_string "$binary" "$binaries")
+    
+    binary=$(echo "$binary" | sed 's/^"\(.*\)"$/\1/')
+    chmod 0555 "$install_dir/$target"
+    ln -s "../$target" "$install_dir/bin/$binary"
+  done
+}
+
+install_package_esy_opam () {
+  local package_dir="$1"
+  local install_dir="$2"
+
+  [ -e "$install_dir/node_modules/@esy-ocaml/esy-opam" ] || mkdir -p "$install_dir/node_modules/@esy-ocaml/esy-opam"
+
+  cp "$package_dir/package/package.json" "$install_dir/node_modules/@esy-ocaml/esy-opam"
+  cp -r "$package_dir/package/dist" "$install_dir/node_modules/@esy-ocaml/esy-opam"
+}
+
+install_package_esy_solve_cudf () {
+  local package_dir="$1"
+  local install_dir="$2"
+  local platform=$(platform)
+
+  [ -e "$install_dir/node_modules/esy-solve-cudf" ] || mkdir -p "$install_dir/node_modules/esy-solve-cudf"
+
+  cp "$package_dir/package/package.json" "$install_dir/node_modules/esy-solve-cudf"
+  cp "$package_dir/package/platform-$platform/esySolveCudfCommand.exe" "$install_dir/node_modules/esy-solve-cudf"
+}
+
+install_package_dependencies () {
+  local package_dir="$1"
+  local tmp_dir="$2"
+
+  if [ -e "$package_dir/package/package.json" ]; then
+    local dependencies=$(json_get_value '"dependencies"' "$(cat "$package_dir/package/package.json")")
+
+    local package
+    for package in $(json_get_keys "$dependencies"); do
+      local version=$(json_get_string "$package" "$dependencies" | tr -d '~=^')
+      
+      install_package "$(echo $package | sed 's/^\"\(.*\)\"$/\1/')" "$version" "$tmp_dir"
+    done
+  fi
+}
+
+install_package () {
+  local package="$1"
+  local version="$2"
+  local tmp_dir="$3"
+
+  local archive="$tmp_dir/$(echo "$package-$version" | tr '/' '_' | tr -d '@').tgz"
+  local package_dir="$tmp_dir/$(basename -s .tgz "$archive")"
+  local install_dir="$tmp_dir/install"
+
+  echo "Downloading $package, version $version"
+  download_package "$package" "$version" "$archive"
+
+  echo "Extracting $package"
+  extract_package "$archive" "$package_dir"
+
+  echo "Installing ${package}"
+  [ -e "$install_dir" ] || mkdir "$install_dir"
+  case "$package" in
+    esy) install_package_esy "$package_dir" "$install_dir" ;;
+    '@esy-ocaml/esy-opam') install_package_esy_opam "$package_dir" "$install_dir" ;;
+    esy-solve-cudf) install_package_esy_solve_cudf "$package_dir" "$install_dir" ;;
+    *) warn "No install script available for $package" ;;
+  esac
+
+  install_package_dependencies "$package_dir" "$tmp_dir"
+}
+
+esy_install () {
+  local install_type="$1"
+  local version="$2"
+  local install_path="$3"
+  local tmp_dir="$4"
+
+  install_package 'esy' "$version" "$tmp_dir"
+
+  mkdir -p "$install_path/$release/bin/"
+  mv "$tmp_dir/install/"* "$install_path/$release/"
+}
+
+[ "$ASDF_INSTALL_TYPE" == 'ref' ] && fail 'This plugin does not support installing by ref.'
+[ -z "$ASDF_INSTALL_VERSION" ] && fail 'Unspecified install version.'
+[ -z "$ASDF_INSTALL_PATH" ] && fail "No installation directory was provided. Are you running this command via asdf? Try running 'asdf install esy <version>'."
+[ -x "$(type -p curl)" ] || fail 'Missing dependency: curl.'
+
+tmp_download_dir="$(mktemp -d -t 'asdf_esy_XXXXXX')"
+trap 'rm -rf "${tmp_download_dir}"' EXIT
+
+esy_install "$ASDF_INSTALL_TYPE" "$ASDF_INSTALL_VERSION" "$ASDF_INSTALL_PATH" "$tmp_download_dir"
