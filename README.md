@@ -1,7 +1,13 @@
+<div align="center">
+<h1>asdf-esy 📦</h1>
+Esy plugin for ASDF version manager
+</div>
+<hr />
+
 ## Installation
 
 ```bash
-asdf plugin-add esy https://gitlab.com/schutm/asdf-esy.git
+asdf plugin-add esy https://github.com/asdf-ocaml/asdf-esy.git
 ```
 
 ## Usage
