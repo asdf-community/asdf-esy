@@ -3,22 +3,22 @@
 registry_path="https://registry.npmjs.org/esy"
 
 # stolen from https://github.com/rbenv/ruby-build/pull/631/files#diff-fdcfb8a18714b33b07529b7d02b54f1dR942
-function sort_versions () {
+function sort_versions() {
   sed 'h; s/[+-]/./g; s/.p\([[:digit:]]\)/.z\1/; s/$/.z/; G; s/\n/ /' |
     LC_ALL=C sort -t. -k 1,1 -k 2,2n -k 3,3n -k 4,4n -k 5,5n | awk '{print $2}'
 }
 
-function extract_versions () {
+function extract_versions() {
   grep -o "\"version\"\:\"[^\"]*\"" |
-  sed -n 's/.*"version":"\([^"]*\)"/\1/p'
+    sed -n 's/.*"version":"\([^"]*\)"/\1/p'
 }
 
-function fail () {
-  >&2 echo "$*"
+function fail() {
+  echo >&2 "$*"
   exit 1
 }
 
-function download_metadata () {
+function download_metadata() {
   curl -sLH 'Accept: application/vnd.npm.install-v1+json; q=1.0, application/json; q=0.8, */*' "$1"
 }
 
@@ -26,5 +26,6 @@ function download_metadata () {
 
 echo $(
   download_metadata $registry_path |
-  extract_versions |
-  sort_versions)
+    extract_versions |
+    sort_versions
+)

@@ -5,7 +5,7 @@ set -e
 registry_path="https://registry.npmjs.org"
 
 # JSON parsing stolen from https://github.com/dominictarr/JSON.sh
-json_tokenize () {
+json_tokenize() {
   local GREP
   local ESCAPE
   local CHAR
@@ -37,7 +37,7 @@ json_tokenize () {
   if [ $is_wordsplit_disabled != 0 ]; then unsetopt shwordsplit; fi
 }
 
-json_parse_array () {
+json_parse_array() {
   local index=0
   local ary=''
 
@@ -45,9 +45,9 @@ json_parse_array () {
   case "$token" in
     ']') ;;
     *)
-      while : ; do
+      while :; do
         json_parse_value "$1" "$index"
-        index=$((index+1))
+        index=$((index + 1))
         ary="$ary""$value"
 
         read -r token
@@ -58,13 +58,14 @@ json_parse_array () {
         esac
 
         read -r token
-      done ;;
+      done
+      ;;
   esac
 
   value=$(printf '[%s]' "$ary")
 }
 
-json_parse_object () {
+json_parse_object() {
   local key
   local obj=''
 
@@ -72,7 +73,7 @@ json_parse_object () {
   case "$token" in
     '}') ;;
     *)
-      while : ; do
+      while :; do
         case "$token" in
           '"'*'"') key=$token ;;
           *) fail "EXPECTED string GOT ${token:-EOF}" ;;
@@ -96,21 +97,22 @@ json_parse_object () {
         esac
 
         read -r token
-      done ;;
+      done
+      ;;
   esac
 
   value=$(printf '{%s}' "$obj")
   :
 }
 
-json_parse_value () {
+json_parse_value() {
   local jpath="${1:+$1,}$2"
 
   case "$token" in
     '{') json_parse_object "$jpath" ;;
-    '[') json_parse_array  "$jpath" ;;
-    # At this point, the only valid single-character tokens are digits.
-    ''|[!0-9]) fail "EXPECTED value GOT ${token:-EOF}" ;;
+    '[') json_parse_array "$jpath" ;;
+      # At this point, the only valid single-character tokens are digits.
+    '' | [!0-9]) fail "EXPECTED value GOT ${token:-EOF}" ;;
     # value with solidus ("\/") replaced in json strings with normalized value: "/"
     *) value=$(echo "$token" | sed 's#\\/##g') ;;
   esac
@@ -120,7 +122,7 @@ json_parse_value () {
   :
 }
 
-json_parse () {
+json_parse() {
   json="$1"
 
   [ -z "$json" ] && return
@@ -133,14 +135,14 @@ json_parse () {
 
   case "$token" in
     '') ;;
-     *) fail "EXPECTED EOF GOT $token" ;;
+    *) fail "EXPECTED EOF GOT $token" ;;
   esac
 }
 
 # What follows is the installer based on:
 # https://github.com/esy/esy/blob/15f593510ea078b4b392b931c9572bc07a306119/scripts/install-esy.sh
 
-json_get_value () {
+json_get_value() {
   local key="\[$(echo $1 | sed 's#\"#\\\"#g;s#\.#\\\.#g;s#/#\\/#g')\]"
   local json="$2"
   local filter=$(printf 's/^%s\s*\(.*\)/\\1/p' "$key")
@@ -148,20 +150,20 @@ json_get_value () {
   json_parse "$json" | sed -n "$filter"
 }
 
-json_get_keys () {
+json_get_keys() {
   local json="$1"
 
   json_parse "$json" | sed 's/^\[\(.*\)\].*$/\1/'
 }
 
-json_get_string () {
+json_get_string() {
   local key="$1"
   local json="$2"
 
   json_get_value "$key" "$json" | sed 's/^"\(.*\)"$/\1/'
 }
 
-platform () {
+platform() {
   if [[ "$OSTYPE" == "linux"* ]]; then
     echo "linux"
   elif [[ "$OSTYPE" == "darwin"* ]]; then
@@ -171,16 +173,16 @@ platform () {
   fi
 }
 
-warn () {
+warn() {
   echo "$*"
 }
 
-fail () {
-  >&2 echo "$*"
+fail() {
+  echo >&2 "$*"
   exit 1
 }
 
-check_shasum () {
+check_shasum() {
   local shasum="$1"
   local file="$2"
 
@@ -194,21 +196,21 @@ check_shasum () {
   fi
 }
 
-download () {
+download() {
   local url="$1"
   local headers=${2+"-H \"$2\""}
 
   eval curl -sL# ${headers} "${url}"
 }
 
-download_metadata () {
+download_metadata() {
   local package="$1"
   local version="$2"
   local url="${registry_path}/${package}"
 
   if [ "${package:0:1}" = '@' ]; then
     # npm doesn't return per version metadata for scoped packages, fake it
-    # as per bug https://npm.community/t/bug-api-get-scoped-package-w-version-fails-with-401-status/3788 
+    # as per bug https://npm.community/t/bug-api-get-scoped-package-w-version-fails-with-401-status/3788
     local metadata=$(download "$url" 'Accept: application/vnd.npm.install-v1+json; q=1.0, application/json; q=0.8, */*')
     json_get_value "\"versions\",\"${version}\"" "$metadata"
   else
@@ -216,7 +218,7 @@ download_metadata () {
   fi
 }
 
-download_package () {
+download_package() {
   local package="$1"
   local version="$2"
   local archive="$3"
@@ -225,11 +227,11 @@ download_package () {
   local shasum=$(json_get_string '"dist","shasum"' "$metadata")
   local tarball=$(json_get_string '"dist","tarball"' "$metadata")
 
-  download "$tarball" > "$archive"
+  download "$tarball" >"$archive"
   check_shasum "$shasum" "$archive"
 }
 
-extract_package () {
+extract_package() {
   local archive="$1"
   local extract_dir="$2"
 
@@ -237,7 +239,7 @@ extract_package () {
   tar -xzf "$archive" -C "$extract_dir"
 }
 
-install_package_esy () {
+install_package_esy() {
   local package_dir="$1"
   local install_dir="$2"
   local platform=$(platform)
@@ -255,14 +257,14 @@ install_package_esy () {
   local binary
   for binary in $(json_get_keys "$binaries"); do
     local target=$(json_get_string "$binary" "$binaries")
-    
+
     binary=$(echo "$binary" | sed 's/^"\(.*\)"$/\1/')
     chmod 0555 "$install_dir/$target"
     ln -s "../$target" "$install_dir/bin/$binary"
   done
 }
 
-install_package_esy_opam () {
+install_package_esy_opam() {
   local package_dir="$1"
   local install_dir="$2"
 
@@ -272,7 +274,7 @@ install_package_esy_opam () {
   cp -r "$package_dir/package/dist" "$install_dir/node_modules/@esy-ocaml/esy-opam"
 }
 
-install_package_esy_solve_cudf () {
+install_package_esy_solve_cudf() {
   local package_dir="$1"
   local install_dir="$2"
   local platform=$(platform)
@@ -283,7 +285,7 @@ install_package_esy_solve_cudf () {
   cp "$package_dir/package/platform-$platform/esySolveCudfCommand.exe" "$install_dir/node_modules/esy-solve-cudf"
 }
 
-install_package_dependencies () {
+install_package_dependencies() {
   local package_dir="$1"
   local tmp_dir="$2"
 
@@ -293,13 +295,13 @@ install_package_dependencies () {
     local package
     for package in $(json_get_keys "$dependencies"); do
       local version=$(json_get_string "$package" "$dependencies" | tr -d '~=^')
-      
+
       install_package "$(echo $package | sed 's/^\"\(.*\)\"$/\1/')" "$version" "$tmp_dir"
     done
   fi
 }
 
-install_package () {
+install_package() {
   local package="$1"
   local version="$2"
   local tmp_dir="$3"
@@ -326,7 +328,7 @@ install_package () {
   install_package_dependencies "$package_dir" "$tmp_dir"
 }
 
-esy_install () {
+esy_install() {
   local install_type="$1"
   local version="$2"
   local install_path="$3"
