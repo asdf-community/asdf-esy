@@ -4,6 +4,8 @@ Esy plugin for ASDF version manager
 </div>
 <hr />
 
+Current Status: **experimental**
+
 ## Installation
 
 ```bash
