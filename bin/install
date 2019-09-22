@@ -257,6 +257,7 @@ extract_package() {
 }
 
 install_package_esy() {
+set -x
   local package_dir="$1"
   local install_dir="$2"
   local platform=$(platform)
