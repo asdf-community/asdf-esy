@@ -202,9 +202,10 @@ check_shasum() {
   local file="$2"
 
   if [ -x "$(type -p shasum)" ]; then
-    case "$(shasum "$file")" in
+    local shasum_file="$(shasum "$file")"
+    case "$shasum_file" in
       ${shasum}*) ;;
-      *) fail 'Integraty check failed. Shasums do not match.' ;;
+      *) fail "Integraty check failed. Shasums do not match.\nExpected $shasum, but received $shasum_file," ;;
     esac
   else
     warn 'Integrity check skipped. Dependency missing: shasum.'
