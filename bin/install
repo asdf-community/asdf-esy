@@ -193,7 +193,7 @@ warn() {
 }
 
 fail() {
-  echo >&2 "$*"
+  echo >&2 -e "$*"
   exit 1
 }
 
@@ -204,7 +204,7 @@ check_shasum() {
   if [ -x "$(type -p shasum)" ]; then
     local shasum_file="$(shasum "$file")"
     case "$shasum_file" in
-      ${shasum}*) ;;
+      "${shasum}"*) ;;
       *) fail "Integraty check failed. Shasums do not match.\nExpected $shasum, but received $shasum_file," ;;
     esac
   else
