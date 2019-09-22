@@ -22,6 +22,6 @@ jobs:
         run: |
           . $HOME/asdf/asdf.sh
           asdf plugin-add esy $GITHUB_WORKSPACE
-          asdf install esy ${{ matrix.opam }}
-          asdf global esy ${{ matrix.opam }}
+          asdf install esy ${{ matrix.esy }}
+          asdf global esy ${{ matrix.esy }}
           esy --version
