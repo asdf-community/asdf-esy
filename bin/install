@@ -160,7 +160,7 @@ json_parse() {
 json_get_value() {
   local key="\[$(echo $1 | sed 's#\"#\\\"#g;s#\.#\\\.#g;s#/#\\/#g')\]"
   local json="$2"
-  local filter=$(printf 's/^%s\s*\(.*\)/\\1/p' "$key")
+  local filter=$(printf 's/^%s[[:blank:]]*\(.*\)/\\1/p' "$key")
 
   json_parse "$json" | sed -n "$filter"
 }
@@ -175,7 +175,7 @@ json_get_string() {
   local key="$1"
   local json="$2"
 
-  json_get_value "$key" "$json" | sed 's/^"\(.*\)"$/\1/'
+  json_get_value "$key" "$json" | sed 's/^[[:blank:]]*"\(.*\)"[[:blank:]]*$/\1/'
 }
 
 platform() {
@@ -193,7 +193,7 @@ warn() {
 }
 
 fail() {
-  echo >&2 "$*"
+  echo >&2 -e "$*"
   exit 1
 }
 
@@ -203,8 +203,9 @@ check_shasum() {
 
   if [ -x "$(type -p shasum)" ]; then
     local shasum_file="$(shasum "$file")"
+    shasum_file=${shasum%% *}
     case "$shasum_file" in
-      ${shasum}*) ;;
+      "${shasum}"*) ;;
       *) fail "Integraty check failed. Shasums do not match.\nExpected $shasum, but received $shasum_file," ;;
     esac
   else
