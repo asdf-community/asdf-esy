@@ -10,8 +10,6 @@ Esy plugin for ASDF version manager
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
 [![License](https://img.shields.io/github/license/asdf-community/asdf-esy?color=brightgreen)](https://github.com/asdf-community/asdf-esy/blob/master/LICENSE)
 
-Current Status: **experimental**
-
 ## Installation
 
 ```bash
