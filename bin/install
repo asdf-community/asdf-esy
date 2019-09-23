@@ -175,10 +175,7 @@ json_get_string() {
   local key="$1"
   local json="$2"
 
-  local value=$(json_get_value "$key" "$json")
-set -x
-  printf "$value" | sed 's/^[[:blank:]]*"\(.*\)"[[:blank:]]*$/\1/'
-set +x
+  json_get_value "$key" "$json" | sed 's/^[[:blank:]]*"\(.*\)"[[:blank:]]*$/\1/'
 }
 
 platform() {
@@ -279,7 +276,6 @@ install_package_esy() {
     local target=$(json_get_string "$binary" "$binaries")
 
     binary=$(echo "$binary" | sed 's/^"\(.*\)"$/\1/')
-echo "x${target}x"
     chmod 0555 "$install_dir/$target"
     ln -s "../$target" "$install_dir/bin/$binary"
   done
