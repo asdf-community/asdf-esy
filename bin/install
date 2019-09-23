@@ -172,10 +172,12 @@ json_get_keys() {
 }
 
 json_get_string() {
+set -x
   local key="$1"
   local json="$2"
 
   json_get_value "$key" "$json" | sed 's/^\s*"\(.*\)"\s*$/\1/'
+set +x
 }
 
 platform() {
@@ -274,10 +276,8 @@ install_package_esy() {
   local binary
   for binary in $(json_get_keys "$binaries"); do
     local target=$(json_get_string "$binary" "$binaries")
-echo "x${binary}x"
+
     binary=$(echo "$binary" | sed 's/^"\(.*\)"$/\1/')
-echo "x${binary}x"
-echo "x${install_dir}x"
 echo "x${target}x"
     chmod 0555 "$install_dir/$target"
     ln -s "../$target" "$install_dir/bin/$binary"
