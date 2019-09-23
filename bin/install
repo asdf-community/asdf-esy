@@ -172,11 +172,12 @@ json_get_keys() {
 }
 
 json_get_string() {
-set -x
   local key="$1"
   local json="$2"
 
-  json_get_value "$key" "$json" | sed 's/^\s*"\(.*\)"\s*$/\1/'
+  local value=$(json_get_value "$key" "$json")
+set -x
+  printf "$value" | sed 's/^\s*"\(.*\)"\s*$/\1/'
 set +x
 }
 
