@@ -4,6 +4,7 @@ Esy plugin for ASDF version manager
 </div>
 <hr />
 
+[![Main workflow](https://github.com/asdf-community/asdf-esy/workflows/Main%20workflow/badge.svg)](https://github.com/asdf-community/asdf-esy/actions)
 [![Average time to resolve an issue](https://isitmaintained.com/badge/resolution/asdf-community/asdf-esy.svg)](https://isitmaintained.com/project/asdf-community/asdf-esy 'Average time to resolve an issue')
 [![Percentage of issues still open](https://isitmaintained.com/badge/open/asdf-community/asdf-esy.svg)](https://isitmaintained.com/project/asdf-community/asdf-esy 'Percentage of issues still open')
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
