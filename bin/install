@@ -160,7 +160,7 @@ json_parse() {
 json_get_value() {
   local key="\[$(echo $1 | sed 's#\"#\\\"#g;s#\.#\\\.#g;s#/#\\/#g')\]"
   local json="$2"
-  local filter=$(printf 's/^%s\s*\(.*\)/\\1/p' "$key")
+  local filter=$(printf 's/^%s[[:blank:]]*\(.*\)/\\1/p' "$key")
 
   json_parse "$json" | sed -n "$filter"
 }
@@ -177,7 +177,7 @@ json_get_string() {
 
   local value=$(json_get_value "$key" "$json")
 set -x
-  printf "$value" | sed 's/^\s*"\(.*\)"/\1/'
+  printf "$value" | sed 's/^[[:blank:]]*"\(.*\)[[:blank:]]$"/\1/'
 set +x
 }
 
