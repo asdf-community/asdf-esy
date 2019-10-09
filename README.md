@@ -1,6 +1,6 @@
 <div align="center">
 <h1>asdf-esy 📦</h1>
-Esy plugin for ASDF version manager
+Esy plugin for asdf version manager
 </div>
 <hr />
 
