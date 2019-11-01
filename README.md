@@ -1,5 +1,5 @@
 <div align="center">
-<h1>asdf-esy 📦</h1>
+<h1>asdf-esy</h1>
 <span><a href="https://esy.sh">esy</a> plugin for asdf version manager</span>
 </div>
 <hr />
