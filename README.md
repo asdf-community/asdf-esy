@@ -7,7 +7,7 @@
 **Note**: This plugin only supports Esy _0.5.0_ or later.
 
 [![Main workflow](https://github.com/asdf-community/asdf-esy/workflows/Main%20workflow/badge.svg)](https://github.com/asdf-community/asdf-esy/actions)
-[![All Contributors](https://img.shields.io/badge/all_contributors-1-orange.svg?style=flat-square)](#contributors)
+[![All Contributors](https://img.shields.io/badge/all_contributors-2-orange.svg?style=flat-square)](#contributors)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](http://makeapullrequest.com)
 [![License](https://img.shields.io/github/license/asdf-community/asdf-esy?style=flat-square&color=brightgreen)](https://github.com/asdf-community/asdf-esy/blob/master/LICENSE)
 
@@ -31,6 +31,7 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
 <table>
   <tr>
     <td align="center"><a href="https://gitlab.com/schutm"><img src="https://avatars3.githubusercontent.com/u/1652928?v=4" width="100px;" alt="Martin Schut"/><br /><sub><b>Martin Schut</b></sub></a><br /><a href="https://github.com/asdf-community/asdf-esy/commits?author=schutm" title="Code">💻</a> <a href="https://github.com/asdf-community/asdf-esy/commits?author=schutm" title="Documentation">📖</a></td>
+    <td align="center"><a href="https://bsky.moe"><img src="https://avatars3.githubusercontent.com/u/38746192?v=4" width="100px;" alt="BSKY"/><br /><sub><b>BSKY</b></sub></a><br /><a href="https://github.com/asdf-community/asdf-esy/issues?q=author%3Aimbsky" title="Bug reports">🐛</a> <a href="https://github.com/asdf-community/asdf-esy/commits?author=imbsky" title="Documentation">📖</a> <a href="#maintenance-imbsky" title="Maintenance">🚧</a></td>
   </tr>
 </table>
 
