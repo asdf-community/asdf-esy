@@ -1,6 +1,10 @@
 name: Main workflow
 
-on: [push, pull_request]
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: "0 0 * * 5"
 
 jobs:
   build:
@@ -22,9 +26,9 @@ jobs:
         run: |
           . $HOME/asdf/asdf.sh
           asdf plugin-add esy $GITHUB_WORKSPACE
-          asdf install esy ${{ matrix.esy }}
-          asdf global esy ${{ matrix.esy }}
-          esy --version
+          asdf install esy latest
+        env:
+          GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   format:
     runs-on: macOS-latest
