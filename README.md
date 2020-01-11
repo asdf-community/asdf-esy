@@ -27,14 +27,18 @@ install & manage versions.
 Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/docs/en/emoji-key)):
 
 <!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
-<!-- prettier-ignore -->
+<!-- prettier-ignore-start -->
+<!-- markdownlint-disable -->
 <table>
   <tr>
-    <td align="center"><a href="https://gitlab.com/schutm"><img src="https://avatars3.githubusercontent.com/u/1652928?v=4" width="100px;" alt="Martin Schut"/><br /><sub><b>Martin Schut</b></sub></a><br /><a href="https://github.com/asdf-community/asdf-esy/commits?author=schutm" title="Code">💻</a> <a href="https://github.com/asdf-community/asdf-esy/commits?author=schutm" title="Documentation">📖</a></td>
-    <td align="center"><a href="https://bsky.moe"><img src="https://avatars3.githubusercontent.com/u/38746192?v=4" width="100px;" alt="BSKY"/><br /><sub><b>BSKY</b></sub></a><br /><a href="https://github.com/asdf-community/asdf-esy/issues?q=author%3Aimbsky" title="Bug reports">🐛</a> <a href="https://github.com/asdf-community/asdf-esy/commits?author=imbsky" title="Documentation">📖</a> <a href="#maintenance-imbsky" title="Maintenance">🚧</a></td>
+    <td align="center"><a href="https://gitlab.com/schutm"><img src="https://avatars3.githubusercontent.com/u/1652928?v=4" width="100px;" alt=""/><br /><sub><b>Martin Schut</b></sub></a><br /><a href="https://github.com/asdf-community/asdf-esy/commits?author=schutm" title="Code">💻</a> <a href="https://github.com/asdf-community/asdf-esy/commits?author=schutm" title="Documentation">📖</a></td>
+    <td align="center"><a href="https://bsky.moe"><img src="https://avatars3.githubusercontent.com/u/38746192?v=4" width="100px;" alt=""/><br /><sub><b>BSKY</b></sub></a><br /><a href="https://github.com/asdf-community/asdf-esy/issues?q=author%3Aimbsky" title="Bug reports">🐛</a> <a href="https://github.com/asdf-community/asdf-esy/commits?author=imbsky" title="Documentation">📖</a> <a href="#maintenance-imbsky" title="Maintenance">🚧</a></td>
+    <td align="center"><a href="https://naturalclar.dev"><img src="https://avatars1.githubusercontent.com/u/6936373?v=4" width="100px;" alt=""/><br /><sub><b>Jesse Katsumata</b></sub></a><br /><a href="#infra-Naturalclar" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a></td>
   </tr>
 </table>
 
+<!-- markdownlint-enable -->
+<!-- prettier-ignore-end -->
 <!-- ALL-CONTRIBUTORS-LIST:END -->
 
 This project follows the [all-contributors](https://github.com/all-contributors/all-contributors) specification. Contributions of any kind welcome!
