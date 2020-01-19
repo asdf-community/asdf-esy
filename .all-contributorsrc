@@ -23,7 +23,8 @@
       "contributions": [
         "bug",
         "doc",
-        "maintenance"
+        "maintenance",
+        "infra"
       ]
     },
     {
