@@ -178,11 +178,45 @@ json_get_string() {
   json_get_value "$key" "$json" | sed 's/^[[:blank:]]*"\(.*\)"[[:blank:]]*$/\1/'
 }
 
+new_dir_arch() {
+  local version="$1"
+	local major_cutoff=0
+	local minor_cutoff=6
+	local patch_cutoff=6
+
+	if [[ "$version" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+		local major="${BASH_REMATCH[1]}"
+		local minor="${BASH_REMATCH[2]}"
+		local patch="${BASH_REMATCH[3]}"
+
+		local major_gt="$([[ $major -gt $major_cutoff ]] && echo 0 || echo 1)"
+		local minor_gt="$([[ $minor -gt $minor_cutoff ]] && echo 0 || echo 1)"
+		local patch_gt="$([[ $patch -gt $patch_cutoff ]] && echo 0 || echo 1)"
+
+		local major_eq="$([[ $major -eq $major_cutoff ]] && echo 0 || echo 1)"
+		local minor_eq="$([[ $minor -eq $minor_cutoff ]] && echo 0 || echo 1)"
+		local patch_eq="$([[ $patch -eq $patch_cutoff ]] && echo 0 || echo 1)"
+
+		local major_match="$([[ $major_gt -eq 0 ]] && echo 0 || echo 1)"
+		local minor_match="$(([[ $major_eq -eq 0 ]] && [[ $minor_gt -eq 0 ]]) && echo 0 || echo 1)"
+		local patch_match="$(([[ $major_eq -eq 0 ]] && [[ $minor_eq -eq 0 ]] && [[ $patch_gt -eq 0 ]]) && echo 0 || echo 1)"
+
+		local new_dir_arch="$(([[ $major_match -eq 0 ]] || [[ $minor_match -eq 0 ]] || [[ $patch_match -eq 0 ]]) && echo 0 || echo 1)"
+
+    echo "$new_dir_arch"
+  else
+    fail "Cannot parse version: $version"
+	fi
+}
+
 platform() {
+  local version="$1"
+  local new_dir_arch=$(new_dir_arch "$version")
+
   if [[ "$OSTYPE" == "linux"* ]]; then
-    echo "linux"
+    if [[ $new_dir_arch -eq 0 ]]; then echo "Linux"; else echo "platform-linux"; fi
   elif [[ "$OSTYPE" == "darwin"* ]]; then
-    echo "darwin"
+    if [[ $new_dir_arch -eq 0 ]]; then echo "macOS"; else echo "platform-darwin"; fi
   else
     fail "Unknown platform: $OSTYPE"
   fi
@@ -259,13 +293,13 @@ extract_package() {
 install_package_esy() {
   local package_dir="$1"
   local install_dir="$2"
-  local platform=$(platform)
+  local platform=$(platform "$version")
 
   [ -e "$install_dir/bin" ] || mkdir "$install_dir/bin"
 
   cp "$package_dir/package/package.json" "$install_dir"
-  cp "$package_dir/package/platform-$platform/_build/default/bin/esyInstallRelease.js" "$install_dir/bin"
-  cp -r "$package_dir/package/platform-$platform/_build" "$install_dir"
+  cp "$package_dir/package/$platform/_build/default/bin/esyInstallRelease.js" "$install_dir/bin"
+  cp -r "$package_dir/package/$platform/_build" "$install_dir"
 
   chmod 0555 "$install_dir/_build/default/esy-build-package/bin/esyBuildPackageCommand.exe"
   chmod 0555 "$install_dir/_build/default/esy-build-package/bin/esyRewritePrefixCommand.exe"
@@ -294,12 +328,12 @@ install_package_esy_opam() {
 install_package_esy_solve_cudf() {
   local package_dir="$1"
   local install_dir="$2"
-  local platform=$(platform)
+  local platform=$(platform "$version")
 
   [ -e "$install_dir/node_modules/esy-solve-cudf" ] || mkdir -p "$install_dir/node_modules/esy-solve-cudf"
 
   cp "$package_dir/package/package.json" "$install_dir/node_modules/esy-solve-cudf"
-  cp "$package_dir/package/platform-$platform/esySolveCudfCommand.exe" "$install_dir/node_modules/esy-solve-cudf"
+  cp "$package_dir/package/$platform/esySolveCudfCommand.exe" "$install_dir/node_modules/esy-solve-cudf"
 }
 
 install_package_dependencies() {
