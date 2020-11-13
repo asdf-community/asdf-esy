@@ -1,32 +1,28 @@
 name: Main workflow
 
 on:
-  push:
-    paths-ignore:
-      - "**.md"
-      - ".all-contributorsrc"
   pull_request:
-    paths-ignore:
-      - "**.md"
-      - ".all-contributorsrc"
+  push:
   schedule:
-    - cron: "0 0 * * 5"
+    - cron: 0 0 * * 5
 
 jobs:
   plugin_test:
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os:
+          - macos-latest
+          - ubuntu-latest
 
     runs-on: ${{ matrix.os }}
 
     steps:
       - name: asdf_plugin_test
-        env:
-          GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        uses: asdf-vm/actions/plugin-test@v1.0.0
+        uses: asdf-vm/actions/plugin-test@v1
         with:
           command: esy --version
+        env:
+          GITHUB_API_TOKEN: ${{ github.token }}
 
   format:
     runs-on: macos-latest
