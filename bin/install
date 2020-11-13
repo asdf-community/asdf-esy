@@ -1,19 +1,4 @@
 #!/usr/bin/env bash
-#
-# Copyright 2019 asdf-esy authors
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#
 
 set -e
 
@@ -180,33 +165,33 @@ json_get_string() {
 
 new_dir_arch() {
   local version="$1"
-	local major_cutoff=0
-	local minor_cutoff=6
-	local patch_cutoff=6
+  local major_cutoff=0
+  local minor_cutoff=6
+  local patch_cutoff=6
 
-	if [[ "$version" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
-		local major="${BASH_REMATCH[1]}"
-		local minor="${BASH_REMATCH[2]}"
-		local patch="${BASH_REMATCH[3]}"
+  if [[ "$version" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+    local major="${BASH_REMATCH[1]}"
+    local minor="${BASH_REMATCH[2]}"
+    local patch="${BASH_REMATCH[3]}"
 
-		local major_gt="$([[ $major -gt $major_cutoff ]] && echo 0 || echo 1)"
-		local minor_gt="$([[ $minor -gt $minor_cutoff ]] && echo 0 || echo 1)"
-		local patch_gt="$([[ $patch -gt $patch_cutoff ]] && echo 0 || echo 1)"
+    local major_gt="$([[ $major -gt $major_cutoff ]] && echo 0 || echo 1)"
+    local minor_gt="$([[ $minor -gt $minor_cutoff ]] && echo 0 || echo 1)"
+    local patch_gt="$([[ $patch -gt $patch_cutoff ]] && echo 0 || echo 1)"
 
-		local major_eq="$([[ $major -eq $major_cutoff ]] && echo 0 || echo 1)"
-		local minor_eq="$([[ $minor -eq $minor_cutoff ]] && echo 0 || echo 1)"
-		local patch_eq="$([[ $patch -eq $patch_cutoff ]] && echo 0 || echo 1)"
+    local major_eq="$([[ $major -eq $major_cutoff ]] && echo 0 || echo 1)"
+    local minor_eq="$([[ $minor -eq $minor_cutoff ]] && echo 0 || echo 1)"
+    local patch_eq="$([[ $patch -eq $patch_cutoff ]] && echo 0 || echo 1)"
 
-		local major_match="$([[ $major_gt -eq 0 ]] && echo 0 || echo 1)"
-		local minor_match="$(([[ $major_eq -eq 0 ]] && [[ $minor_gt -eq 0 ]]) && echo 0 || echo 1)"
-		local patch_match="$(([[ $major_eq -eq 0 ]] && [[ $minor_eq -eq 0 ]] && [[ $patch_gt -eq 0 ]]) && echo 0 || echo 1)"
+    local major_match="$([[ $major_gt -eq 0 ]] && echo 0 || echo 1)"
+    local minor_match="$( ([[ $major_eq -eq 0 ]] && [[ $minor_gt -eq 0 ]]) && echo 0 || echo 1)"
+    local patch_match="$( ([[ $major_eq -eq 0 ]] && [[ $minor_eq -eq 0 ]] && [[ $patch_gt -eq 0 ]]) && echo 0 || echo 1)"
 
-		local new_dir_arch="$(([[ $major_match -eq 0 ]] || [[ $minor_match -eq 0 ]] || [[ $patch_match -eq 0 ]]) && echo 0 || echo 1)"
+    local new_dir_arch="$( ([[ $major_match -eq 0 ]] || [[ $minor_match -eq 0 ]] || [[ $patch_match -eq 0 ]]) && echo 0 || echo 1)"
 
     echo "$new_dir_arch"
   else
     fail "Cannot parse version: $version"
-	fi
+  fi
 }
 
 platform() {
