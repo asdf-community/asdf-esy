@@ -12,7 +12,6 @@
 
 - Make sure you have the required dependencies installed:
   - curl
-  - git
   - tar
 
 ## Installation
