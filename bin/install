@@ -182,7 +182,7 @@ new_dir_arch() {
     local minor_eq="$([[ $minor -eq $minor_cutoff ]] && echo 0 || echo 1)"
     local patch_eq="$([[ $patch -eq $patch_cutoff ]] && echo 0 || echo 1)"
 
-    local major_match="$([[ $major_gt -eq 0 ]] && echo 0 || echo 1)"
+    local major_match="$( ([[ $major_gt -eq 0 ]] || [[ $major_eq -eq 0 ]]) && echo 0 || echo 1)"
     local minor_match="$( ([[ $major_eq -eq 0 ]] && [[ $minor_gt -eq 0 ]]) && echo 0 || echo 1)"
     local patch_match="$( ([[ $major_eq -eq 0 ]] && [[ $minor_eq -eq 0 ]] && [[ $patch_gt -eq 0 ]]) && echo 0 || echo 1)"
 
