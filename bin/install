@@ -163,45 +163,11 @@ json_get_string() {
   json_get_value "$key" "$json" | sed 's/^[[:blank:]]*"\(.*\)"[[:blank:]]*$/\1/'
 }
 
-new_dir_arch() {
-  local version="$1"
-  local major_cutoff=0
-  local minor_cutoff=6
-  local patch_cutoff=6
-
-  if [[ "$version" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
-    local major="${BASH_REMATCH[1]}"
-    local minor="${BASH_REMATCH[2]}"
-    local patch="${BASH_REMATCH[3]}"
-
-    local major_gt="$([[ $major -gt $major_cutoff ]] && echo 0 || echo 1)"
-    local minor_gt="$([[ $minor -gt $minor_cutoff ]] && echo 0 || echo 1)"
-    local patch_gt="$([[ $patch -gt $patch_cutoff ]] && echo 0 || echo 1)"
-
-    local major_eq="$([[ $major -eq $major_cutoff ]] && echo 0 || echo 1)"
-    local minor_eq="$([[ $minor -eq $minor_cutoff ]] && echo 0 || echo 1)"
-    local patch_eq="$([[ $patch -eq $patch_cutoff ]] && echo 0 || echo 1)"
-
-    local major_match="$([[ $major_gt -eq 0 ]] && echo 0 || echo 1)"
-    local minor_match="$( ([[ $major_eq -eq 0 ]] && [[ $minor_gt -eq 0 ]]) && echo 0 || echo 1)"
-    local patch_match="$( ([[ $major_eq -eq 0 ]] && [[ $minor_eq -eq 0 ]] && [[ $patch_gt -eq 0 ]]) && echo 0 || echo 1)"
-
-    local new_dir_arch="$( ([[ $major_match -eq 0 ]] || [[ $minor_match -eq 0 ]] || [[ $patch_match -eq 0 ]]) && echo 0 || echo 1)"
-
-    echo "$new_dir_arch"
-  else
-    fail "Cannot parse version: $version"
-  fi
-}
-
 platform() {
-  local version="$1"
-  local new_dir_arch=$(new_dir_arch "$version")
-
   if [[ "$OSTYPE" == "linux"* ]]; then
-    if [[ $new_dir_arch -eq 0 ]]; then echo "Linux"; else echo "platform-linux"; fi
+    echo "platform-linux"
   elif [[ "$OSTYPE" == "darwin"* ]]; then
-    if [[ $new_dir_arch -eq 0 ]]; then echo "macOS"; else echo "platform-darwin"; fi
+    echo "platform-darwin"
   else
     fail "Unknown platform: $OSTYPE"
   fi
@@ -278,26 +244,45 @@ extract_package() {
 install_package_esy() {
   local package_dir="$1"
   local install_dir="$2"
-  local platform=$(platform "$version")
+  local platform=$(platform)
 
-  [ -e "$install_dir/bin" ] || mkdir "$install_dir/bin"
+  local name_to_correct=$(
+    case "${OSTYPE}" in
+      "linux"*) echo "Linux" ;;
+      "darwin"*) echo "macOS" ;;
+      *) echo "" ;;
+    esac
+  )
 
-  cp "$package_dir/package/package.json" "$install_dir"
-  cp "$package_dir/package/$platform/_build/default/bin/esyInstallRelease.js" "$install_dir/bin"
-  cp -r "$package_dir/package/$platform/_build" "$install_dir"
+  if [[ -n "$name_to_correct" ]] && [[ -d $package_dir/package/$name_to_correct ]]; then
+    mv "$package_dir/package/$name_to_correct" "$package_dir/package/$platform"
+  fi
 
-  chmod 0555 "$install_dir/_build/default/esy-build-package/bin/esyBuildPackageCommand.exe"
-  chmod 0555 "$install_dir/_build/default/esy-build-package/bin/esyRewritePrefixCommand.exe"
+  if [[ -d "$package_dir/package/$platform/_build" ]]; then
+    [ -e "$install_dir/bin" ] || mkdir "$install_dir/bin"
 
-  local binaries=$(json_get_value '"bin"' "$(cat "$package_dir/package/package.json")")
-  local binary
-  for binary in $(json_get_keys "$binaries"); do
-    local target=$(json_get_string "$binary" "$binaries")
+    cp "$package_dir/package/package.json" "$install_dir"
+    cp "$package_dir/package/$platform/_build/default/bin/esyInstallRelease.js" "$install_dir/bin"
+    cp -r "$package_dir/package/$platform/_build" "$install_dir"
 
-    binary=$(echo "$binary" | sed 's/^"\(.*\)"$/\1/')
-    chmod 0555 "$install_dir/$target"
-    ln -s "../$target" "$install_dir/bin/$binary"
-  done
+    chmod 0555 "$install_dir/_build/default/esy-build-package/bin/esyBuildPackageCommand.exe"
+    chmod 0555 "$install_dir/_build/default/esy-build-package/bin/esyRewritePrefixCommand.exe"
+
+    local binaries=$(json_get_value '"bin"' "$(cat "$package_dir/package/package.json")")
+    local binary
+    for binary in $(json_get_keys "$binaries"); do
+      local target=$(json_get_string "$binary" "$binaries")
+
+      binary=$(echo "$binary" | sed 's/^"\(.*\)"$/\1/')
+      chmod 0555 "$install_dir/$target"
+      ln -s "../$target" "$install_dir/bin/$binary"
+    done
+  else
+    cp -r "$package_dir/package/$platform/"* "$install_dir"
+    cp "$package_dir/package/postinstall.js" "$install_dir/bin"
+
+    cd "$install_dir" && npm run-script postinstall > /dev/null
+  fi
 }
 
 install_package_esy_opam() {
@@ -382,6 +367,6 @@ esy_install() {
 [ -x "$(type -p curl)" ] || fail 'Missing dependency: curl.'
 
 tmp_download_dir="$(mktemp -d -t 'asdf_esy_XXXXXX')"
-trap 'rm -rf "${tmp_download_dir}"' EXIT
+#trap 'rm -rf "${tmp_download_dir}"' EXIT
 
 esy_install "$ASDF_INSTALL_TYPE" "$ASDF_INSTALL_VERSION" "$ASDF_INSTALL_PATH" "$tmp_download_dir"
