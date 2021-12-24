@@ -164,9 +164,9 @@ json_get_string() {
 }
 
 platform() {
-  if [[ "$OSTYPE" == "linux"* ]]; then
+  if [[ $OSTYPE == "linux"* ]]; then
     echo "platform-linux"
-  elif [[ "$OSTYPE" == "darwin"* ]]; then
+  elif [[ $OSTYPE == "darwin"* ]]; then
     echo "platform-darwin"
   else
     fail "Unknown platform: $OSTYPE"
@@ -254,7 +254,7 @@ install_package_esy() {
     esac
   )
 
-  if [[ -n "$name_to_correct" ]] && [[ -d $package_dir/package/$name_to_correct ]]; then
+  if [[ -n $name_to_correct ]] && [[ -d $package_dir/package/$name_to_correct ]]; then
     mv "$package_dir/package/$name_to_correct" "$package_dir/package/$platform"
   fi
 
@@ -281,7 +281,7 @@ install_package_esy() {
     cp -r "$package_dir/package/$platform/"* "$install_dir"
     cp "$package_dir/package/postinstall.js" "$install_dir/bin"
 
-    cd "$install_dir" && npm run-script postinstall > /dev/null
+    cd "$install_dir" && npm run-script postinstall >/dev/null
   fi
 }
 
