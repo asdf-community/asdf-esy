@@ -10,13 +10,13 @@ json_tokenize() {
   local ESCAPE
   local CHAR
 
-  if echo "test string" | egrep -ao --color=never "test" >/dev/null 2>&1; then
+  if echo "test string" | grep -Eao --color=never "test" >/dev/null 2>&1; then
     GREP='egrep -ao --color=never'
   else
     GREP='egrep -ao'
   fi
 
-  if echo "test string" | egrep -o "test" >/dev/null 2>&1; then
+  if echo "test string" | grep -Eo "test" >/dev/null 2>&1; then
     ESCAPE='(\\[^u[:cntrl:]]|\\u[0-9a-fA-F]{4})'
     CHAR='[^[:cntrl:]"\\]'
   else
@@ -31,10 +31,11 @@ json_tokenize() {
   local SPACE='[[:space:]]+'
 
   # Force zsh to expand $A into multiple words
-  local is_wordsplit_disabled=$(unsetopt 2>/dev/null | grep -c '^shwordsplit$')
-  if [ $is_wordsplit_disabled != 0 ]; then setopt shwordsplit; fi
-  $GREP "$STRING|$NUMBER|$KEYWORD|$SPACE|." | egrep -v "^$SPACE$"
-  if [ $is_wordsplit_disabled != 0 ]; then unsetopt shwordsplit; fi
+  local is_wordsplit_disabled
+  is_wordsplit_disabled=$(unsetopt 2>/dev/null | grep -c '^shwordsplit$')
+  if [ "$is_wordsplit_disabled" != 0 ]; then setopt shwordsplit; fi
+  $GREP "$STRING|$NUMBER|$KEYWORD|$SPACE|." | grep -Ev "^$SPACE$"
+  if [ "$is_wordsplit_disabled" != 0 ]; then unsetopt shwordsplit; fi
 }
 
 json_parse_array() {
@@ -113,8 +114,11 @@ json_parse_value() {
     '[') json_parse_array "$jpath" ;;
       # At this point, the only valid single-character tokens are digits.
     '' | [!0-9]) fail "EXPECTED value GOT ${token:-EOF}" ;;
-    # value with solidus ("\/") replaced in json strings with normalized value: "/"
-    *) value=$(echo "$token" | sed 's#\\/##g') ;;
+      # value with solidus ("\/") replaced in json strings with normalized value: "/"
+    *)
+      # shellcheck disable=SC2001
+      value=$(echo "$token" | sed 's#\\/##g')
+      ;;
   esac
 
   [ "$value" = '' ] && return
@@ -127,12 +131,14 @@ json_parse() {
 
   [ -z "$json" ] && return
 
+  # shellcheck disable=SC2030
   echo "$json" | json_tokenize | (
     read -r token
     json_parse_value
     read -r token
   )
 
+  # shellcheck disable=SC2031
   case "$token" in
     '') ;;
     *) fail "EXPECTED EOF GOT $token" ;;
@@ -143,9 +149,11 @@ json_parse() {
 # https://github.com/esy/esy/blob/15f593510ea078b4b392b931c9572bc07a306119/scripts/install-esy.sh
 
 json_get_value() {
-  local key="\[$(echo $1 | sed 's#\"#\\\"#g;s#\.#\\\.#g;s#/#\\/#g')\]"
+  local key
   local json="$2"
-  local filter=$(printf 's/^%s[[:blank:]]*\(.*\)/\\1/p' "$key")
+  local filter
+  key="\[$(echo "$1" | sed 's#\"#\\\"#g;s#\.#\\\.#g;s#/#\\/#g')\]"
+  filter=$(printf 's/^%s[[:blank:]]*\(.*\)/\\1/p' "$key")
 
   json_parse "$json" | sed -n "$filter"
 }
@@ -187,7 +195,8 @@ check_shasum() {
   local file="$2"
 
   if [ -x "$(type -p shasum)" ]; then
-    local shasum_file="$(shasum "$file")"
+    local shasum_file
+    shasum_file="$(shasum "$file")"
     shasum_file=${shasum%% *}
     case "$shasum_file" in
       "${shasum}"*) ;;
@@ -202,7 +211,7 @@ download() {
   local url="$1"
   local headers=${2+"-H \"$2\""}
 
-  eval curl -sL# ${headers} "${url}"
+  eval curl -sL# "${headers}" "${url}"
 }
 
 download_metadata() {
@@ -213,7 +222,8 @@ download_metadata() {
   if [ "${package:0:1}" = '@' ]; then
     # npm doesn't return per version metadata for scoped packages, fake it
     # as per bug https://npm.community/t/bug-api-get-scoped-package-w-version-fails-with-401-status/3788
-    local metadata=$(download "$url" 'Accept: application/vnd.npm.install-v1+json; q=1.0, application/json; q=0.8, */*')
+    local metadata
+    metadata=$(download "$url" 'Accept: application/vnd.npm.install-v1+json; q=1.0, application/json; q=0.8, */*')
     json_get_value "\"versions\",\"${version}\"" "$metadata"
   else
     download "$url/${version}" 'Accept: application/vnd.npm.install-v1+json; q=1.0, application/json; q=0.8, */*'
@@ -225,9 +235,12 @@ download_package() {
   local version="$2"
   local archive="$3"
 
-  local metadata=$(download_metadata "$package" "$version")
-  local shasum=$(json_get_string '"dist","shasum"' "$metadata")
-  local tarball=$(json_get_string '"dist","tarball"' "$metadata")
+  local metadata
+  local shasum
+  local tarball
+  metadata=$(download_metadata "$package" "$version")
+  shasum=$(json_get_string '"dist","shasum"' "$metadata")
+  tarball=$(json_get_string '"dist","tarball"' "$metadata")
 
   download "$tarball" >"$archive"
   check_shasum "$shasum" "$archive"
@@ -244,15 +257,22 @@ extract_package() {
 install_package_esy() {
   local package_dir="$1"
   local install_dir="$2"
-  local platform=$(platform)
+  local platform
+  local name_to_correct
 
-  local name_to_correct=$(
-    case "${OSTYPE}" in
-      "linux"*) echo "Linux" ;;
-      "darwin"*) echo "macOS" ;;
-      *) echo "" ;;
-    esac
-  )
+  platform=$(platform)
+
+  case "${OSTYPE}" in
+    "linux"*)
+      name_to_correct="Linux"
+      ;;
+    "darwin"*)
+      name_to_correct="macOS"
+      ;;
+    *)
+      name_to_correct=""
+      ;;
+  esac
 
   if [[ -n $name_to_correct ]] && [[ -d $package_dir/package/$name_to_correct ]]; then
     mv "$package_dir/package/$name_to_correct" "$package_dir/package/$platform"
@@ -268,11 +288,15 @@ install_package_esy() {
     chmod 0555 "$install_dir/_build/default/esy-build-package/bin/esyBuildPackageCommand.exe"
     chmod 0555 "$install_dir/_build/default/esy-build-package/bin/esyRewritePrefixCommand.exe"
 
-    local binaries=$(json_get_value '"bin"' "$(cat "$package_dir/package/package.json")")
+    local binaries
     local binary
-    for binary in $(json_get_keys "$binaries"); do
-      local target=$(json_get_string "$binary" "$binaries")
 
+    binaries=$(json_get_value '"bin"' "$(cat "$package_dir/package/package.json")")
+    for binary in $(json_get_keys "$binaries"); do
+      local target
+      target=$(json_get_string "$binary" "$binaries")
+
+      # shellcheck disable=SC2001
       binary=$(echo "$binary" | sed 's/^"\(.*\)"$/\1/')
       chmod 0555 "$install_dir/$target"
       ln -s "../$target" "$install_dir/bin/$binary"
@@ -298,7 +322,8 @@ install_package_esy_opam() {
 install_package_esy_solve_cudf() {
   local package_dir="$1"
   local install_dir="$2"
-  local platform=$(platform "$version")
+  local platform
+  platform=$(platform "$version")
 
   [ -e "$install_dir/node_modules/esy-solve-cudf" ] || mkdir -p "$install_dir/node_modules/esy-solve-cudf"
 
@@ -311,13 +336,16 @@ install_package_dependencies() {
   local tmp_dir="$2"
 
   if [ -e "$package_dir/package/package.json" ]; then
-    local dependencies=$(json_get_value '"dependencies"' "$(cat "$package_dir/package/package.json")")
+    local dependencies
+    dependencies=$(json_get_value '"dependencies"' "$(cat "$package_dir/package/package.json")")
 
     local package
     for package in $(json_get_keys "$dependencies"); do
-      local version=$(json_get_string "$package" "$dependencies" | tr -d '~=^')
+      local version
+      version=$(json_get_string "$package" "$dependencies" | tr -d '~=^')
 
-      install_package "$(echo $package | sed 's/^\"\(.*\)\"$/\1/')" "$version" "$tmp_dir"
+      # shellcheck disable=SC2001
+      install_package "$(echo "$package" | sed 's/^\"\(.*\)\"$/\1/')" "$version" "$tmp_dir"
     done
   fi
 }
@@ -327,9 +355,12 @@ install_package() {
   local version="$2"
   local tmp_dir="$3"
 
-  local archive="$tmp_dir/$(echo "$package-$version" | tr '/' '_' | tr -d '@').tgz"
-  local package_dir="$tmp_dir/$(basename -s .tgz "$archive")"
-  local install_dir="$tmp_dir/install"
+  local archive
+  local package_dir
+  local install_dir
+  archive="$tmp_dir/$(echo "$package-$version" | tr '/' '_' | tr -d '@').tgz"
+  package_dir="$tmp_dir/$(basename -s .tgz "$archive")"
+  install_dir="$tmp_dir/install"
 
   echo "Downloading $package, version $version"
   download_package "$package" "$version" "$archive"
@@ -350,15 +381,17 @@ install_package() {
 }
 
 esy_install() {
-  local install_type="$1"
+  # local install_type="$1"
   local version="$2"
   local install_path="$3"
   local tmp_dir="$4"
 
   install_package 'esy' "$version" "$tmp_dir"
 
-  mkdir -p "$install_path/$release/bin/"
-  mv "$tmp_dir/install/"* "$install_path/$release/"
+  mkdir -p "$install_path/bin"
+  mv "$tmp_dir/install/"* "$install_path"
+
+  echo "$install_path"
 }
 
 [ "$ASDF_INSTALL_TYPE" == 'ref' ] && fail 'This plugin does not support installing by ref.'

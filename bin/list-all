@@ -24,8 +24,4 @@ function download_metadata() {
 
 [ -x "$(type -p curl)" ] || fail "Missing dependency: curl."
 
-echo $(
-  download_metadata $registry_path |
-    extract_versions |
-    sort_versions
-)
+download_metadata $registry_path | extract_versions | sort_versions | xargs
